@@ -9,7 +9,7 @@ const port = process.env.PORT || process.env.NODE_PORT || 3000;
 const urlStruct = {
   GET: {
     '/': htmlHandler.getIndex,
-    '/style': htmlHandler.getStyle,
+    '/style.css': htmlHandler.getStyle,
     '/getUsers': jsonHandler.getUsers,
     '/updateUsers': jsonHandler.updateUsers,
     '/notFound': jsonHandler.notFound,
@@ -24,13 +24,31 @@ const urlStruct = {
 const onRequest = (request, response) => {
   // get the URL data
   const parsedUrl = url.parse(request.url);
-  // get the queries
-  const params = query.parse(parsedUrl.query);
 
-  if (urlStruct[request.method][parsedUrl.pathname]) {
-    urlStruct[request.method][parsedUrl.pathname](request, response, params);
+  console.log(`${request.method} ${parsedUrl.pathname}`);
+
+  if (request.method === 'POST') {
+    const body = [];
+    request.on('error', (err) => {
+      console.dir(err);
+      response.statusCode = 400;
+      response.end();
+    });
+
+    request.on('data', (chunk) => {
+      body.push(chunk);
+    });
+
+    request.on('end', () => {
+      const bodyStr = Buffer.concat(body).toString();
+      const params = query.parse(bodyStr);
+
+      jsonHandler.addUser(request, response, params);
+    });
+  } else if (urlStruct[request.method][parsedUrl.pathname]) {
+    urlStruct[request.method][parsedUrl.pathname](request, response);
   } else {
-    urlStruct[request.method]['/notFound'](request, response, params);
+    urlStruct[request.method]['/notFound'](request, response);
   }
 };
 
